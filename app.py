@@ -1,4 +1,6 @@
 import os
+import zipfile
+import io
 import streamlit as st
 from yt_dlp import YoutubeDL
 from moviepy.editor import VideoFileClip
@@ -21,7 +23,6 @@ if st.button("🚀 Generate YouTube Shorts"):
     video_path = "source_video.mp4"
     success = False
     
-    # Priority to uploaded file to avoid all YouTube/FFmpeg errors instantly
     if uploaded_file is not None:
         with open(video_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
@@ -30,7 +31,7 @@ if st.button("🚀 Generate YouTube Shorts"):
     elif yt_url:
         with st.spinner("Downloading video..."):
             ydl_opts = {
-                'format': 'b',  # Single muxed format, zero FFmpeg required
+                'format': 'b',
                 'outtmpl': video_path,
                 'overwrites': True,
                 'noplaylist': True
@@ -76,14 +77,20 @@ if st.button("🚀 Generate YouTube Shorts"):
                 
                 st.success(f"Successfully generated {len(clip_files)} YouTube Shorts!")
                 
-                st.markdown("### 📥 Download Your Shorts:")
-                for file in clip_files:
-                    with open(file, "rb") as f:
-                        st.download_button(
-                            label=f"Download {os.path.basename(file)}",
-                            data=f,
-                            file_name=os.path.basename(file),
-                            mime="video/mp4"
-                        )
+                # Create an in-memory ZIP file containing all generated shorts
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                    for file in clip_files:
+                        zip_file.write(file, os.path.basename(file))
+                zip_buffer.seek(0)
+                
+                st.markdown("### 📥 Download All Your Shorts:")
+                st.download_button(
+                    label=f"📦 Download All {len(clip_files)} Shorts as ZIP",
+                    data=zip_buffer,
+                    file_name="motivated_christian_shorts.zip",
+                    mime="application/zip"
+                )
+                
             except Exception as e:
                 st.error(f"Error processing video clips: {e}")
