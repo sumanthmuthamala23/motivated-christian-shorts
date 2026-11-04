@@ -16,11 +16,13 @@ st.set_page_config(page_title="Motivatedchristian Shorts Clipper", page_icon="�
 if os.path.exists("banner.png"):
     st.image("banner.png", use_container_width=True)
 
-st.title("✝️ Motivatedchristian: HD Shorts Generator")
-st.markdown("Upload your video file or paste a YouTube link to generate high-resolution vertical shorts instantly!")
+st.title("✝️ Motivatedchristian: HD Shorts & Smart Metadata Generator")
+st.markdown("Upload your video or paste a YouTube link to generate high-resolution vertical shorts with smart, unique titles and captions tailored per clip!")
 
 if "clip_files" not in st.session_state:
     st.session_state.clip_files = []
+if "video_title" not in st.session_state:
+    st.session_state.video_title = "Telugu Christian Devotional"
 if "generated" not in st.session_state:
     st.session_state.generated = False
 
@@ -35,25 +37,36 @@ os.makedirs(output_dir, exist_ok=True)
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    generate_btn = st.button("🚀 Generate HD Shorts")
+    generate_btn = st.button("🚀 Generate HD Shorts & Captions")
 with col2:
     reset_btn = st.button("🔄 Reset App")
 
 if reset_btn:
     st.session_state.clip_files = []
+    st.session_state.video_title = "Telugu Christian Devotional"
     st.session_state.generated = False
     st.rerun()
 
 if generate_btn:
     video_path = "source_video.mp4"
     success = False
+    extracted_title = "Telugu Christian Devotional"
     
     if uploaded_file is not None:
         with open(video_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
+        extracted_title = os.path.splitext(uploaded_file.name)[0].replace("_", " ")
         success = True
     elif yt_url:
-        with st.spinner("Downloading video..."):
+        with st.spinner("Analyzing YouTube video metadata & downloading..."):
+            ydl_info_opts = {'noplaylist': True}
+            try:
+                with YoutubeDL(ydl_info_opts) as ydl:
+                    info_dict = ydl.extract_info(yt_url, download=False)
+                    extracted_title = info_dict.get('title', 'Telugu Christian Devotional')
+            except:
+                pass
+
             ydl_opts = {
                 'format': 'b',
                 'outtmpl': video_path,
@@ -88,7 +101,6 @@ if generate_btn:
                         
                     subclip = video.subclip(start_t, end_t)
                     
-                    # Crop to vertical 9:16 format
                     w, h = subclip.size
                     target_w = int(h * 9 / 16)
                     if target_w < w:
@@ -108,13 +120,14 @@ if generate_btn:
                     clip_files.append(out_name)
                 
                 st.session_state.clip_files = clip_files
+                st.session_state.video_title = extracted_title
                 st.session_state.generated = True
                 
             except Exception as e:
                 st.error(f"Error processing video clips: {e}")
 
 if st.session_state.generated and st.session_state.clip_files:
-    st.success(f"Successfully generated {len(st.session_state.clip_files)} HD Shorts!")
+    st.success(f"Successfully generated {len(st.session_state.clip_files)} HD Shorts with unique captions!")
     
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -131,8 +144,18 @@ if st.session_state.generated and st.session_state.clip_files:
     )
     
     st.markdown("---")
-    st.markdown("### 📝 Ready-to-Use Titles & Captions for Upload:")
+    st.markdown("### 📝 Smart Ready-to-Use Titles & Captions (Unique per Short):")
+    
+    base_title = st.session_state.video_title
     for i, file in enumerate(st.session_state.clip_files):
-        with st.expander(f"📌 Short {i+1} Details & Tags"):
-            st.text_input(f"Title {i+1}", value=f"దేవుని కృప నిత్యం తోడుంటుంది 🙏✨ #{i+1} #Jesus #TeluguChristian #Shorts", key=f"title_{i}")
-            st.text_area(f"Description & Hashtags {i+1}", value=f"Watch this powerful Telugu Christian message to strengthen your faith. Type 'Amen' in the comments!\n\n#TeluguChristian #JesusSaves #ChristianShorts #TeluguWorship #BiblePromise #MotivatedChristian", key=f"desc_{i}")
+        # Calculate approximate start time for unique context
+        interval = max(30, int(300 // (len(st.session_state.clip_files) + 1)))
+        approx_sec = i * interval
+        m, s = divmod(approx_sec, 60)
+        
+        with st.expander(f"📌 Short {i+1} (Segment {m}m {s}s) - Details & Tags"):
+            smart_title = f"{base_title[:45]} - Part {i+1} 🙏✨ #Jesus #TeluguChristian #Shorts"
+            smart_desc = f"Powerful moment from '{base_title}': Watch, be blessed, and type 'Amen' in the comments!\n\n#TeluguChristian #JesusSaves #ChristianShorts #TeluguWorship #BiblePromise #MotivatedChristian"
+            
+            st.text_input(f"Title {i+1}", value=smart_title, key=f"title_{i}")
+            st.text_area(f"Description & Hashtags {i+1}", value=smart_desc, key=f"desc_{i}")
