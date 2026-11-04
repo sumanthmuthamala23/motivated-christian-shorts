@@ -5,13 +5,11 @@ from moviepy.editor import VideoFileClip
 
 st.set_page_config(page_title="Motivatedchristian Shorts Clipper", page_icon="✝️", layout="centered")
 
-st.title("✝️ Motivatedchristian: Telugu Shorts Generator")
-st.markdown("Upload a video file or paste a YouTube link to automatically slice it into multiple 30-second vertical Telugu Christian Shorts!")
+st.title("✝️ Motivatedchristian: Shorts Generator")
+st.markdown("Upload an MP4 file or paste a YouTube link to automatically slice it into vertical 9:16 Shorts!")
 
-yt_url = st.text_input("Paste YouTube Video Link:")
-format_choice = st.selectbox("Select Video Format Preference:", ["Best Single File (No FFmpeg required)", "Fast Download (360p/480p MP4)"])
-
-uploaded_file = st.file_uploader("Or Upload Long Video File (.mp4):", type=["mp4", "mov"])
+uploaded_file = st.file_uploader("Upload Long Video File (.mp4):", type=["mp4", "mov"])
+yt_url = st.text_input("Or Paste YouTube Video Link (optional):")
 
 num_clips = st.slider("How many Shorts to generate?", min_value=3, max_value=10, value=5)
 clip_duration = 30
@@ -20,47 +18,35 @@ output_dir = "generated_shorts"
 os.makedirs(output_dir, exist_ok=True)
 
 if st.button("🚀 Generate YouTube Shorts"):
-    video_path = None
+    video_path = "source_video.mp4"
+    success = False
     
-    if yt_url:
-        with st.spinner("Downloading video from YouTube using yt-dlp..."):
-            if "Fast" in format_choice:
-                ydl_opts = {
-                    'format': 'bv*[height<=480]+ba/b[height<=480] / best[height<=480] / best',
-                    'outtmpl': 'source_video.mp4',
-                    'overwrites': True,
-                    'noplaylist': True
-                }
-            else:
-                ydl_opts = {
-                    'format': 'best[ext=mp4]/best',
-                    'outtmpl': 'source_video.mp4',
-                    'overwrites': True,
-                    'noplaylist': True
-                }
-            
+    # Priority to uploaded file to avoid all YouTube/FFmpeg errors instantly
+    if uploaded_file is not None:
+        with open(video_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.success("Using your uploaded video file successfully!")
+        success = True
+    elif yt_url:
+        with st.spinner("Downloading video..."):
+            ydl_opts = {
+                'format': 'b',  # Single muxed format, zero FFmpeg required
+                'outtmpl': video_path,
+                'overwrites': True,
+                'noplaylist': True
+            }
             try:
                 with YoutubeDL(ydl_opts) as ydl:
                     ydl.download([yt_url])
-                video_path = "source_video.mp4"
-                st.success("YouTube video downloaded successfully!")
+                if os.path.exists(video_path):
+                    st.success("YouTube video downloaded successfully!")
+                    success = True
             except Exception as e:
-                try:
-                    ydl_opts_fallback = {'outtmpl': 'source_video.mp4', 'overwrites': True, 'noplaylist': True}
-                    with YoutubeDL(ydl_opts_fallback) as ydl:
-                        ydl.download([yt_url])
-                    video_path = "source_video.mp4"
-                    st.success("YouTube video downloaded successfully using fallback format!")
-                except Exception as e2:
-                    st.error(f"Error downloading video: {e2}")
-                
-    elif uploaded_file is not None:
-        video_path = "source_video.mp4"
-        with open(video_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        st.success("Uploaded video saved successfully!")
+                st.error(f"Download failed: {e}. Please use the file uploader above for instant results!")
+    else:
+        st.warning("Please either upload an MP4 file or paste a YouTube link.")
 
-    if video_path and os.path.exists(video_path):
+    if success and os.path.exists(video_path):
         with st.spinner("Slicing video into vertical (9:16) shorts..."):
             try:
                 clip_files = []
