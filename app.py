@@ -9,15 +9,15 @@ if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.Resampling.LANCZOS
 
 from yt_dlp import YoutubeDL
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
+from moviepy.editor import VideoFileClip
 
 st.set_page_config(page_title="Motivatedchristian Shorts Clipper", page_icon="✝️", layout="centered")
 
 if os.path.exists("banner.png"):
     st.image("banner.png", use_container_width=True)
 
-st.title("✝️ Motivatedchristian: HD Shorts & Watermark Generator")
-st.markdown("Upload your video file to generate high-resolution vertical shorts with a tiny, clean professional watermark tucked at the top-right!")
+st.title("✝️ Motivatedchristian: HD Shorts Generator")
+st.markdown("Upload your video file or paste a YouTube link to generate high-resolution vertical shorts instantly!")
 
 if "clip_files" not in st.session_state:
     st.session_state.clip_files = []
@@ -35,7 +35,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    generate_btn = st.button("🚀 Generate Watermarked Shorts")
+    generate_btn = st.button("🚀 Generate HD Shorts")
 with col2:
     reset_btn = st.button("🔄 Reset App")
 
@@ -71,13 +71,12 @@ if generate_btn:
         st.warning("Please upload an MP4 file or paste a YouTube link.")
 
     if success and os.path.exists(video_path):
-        with st.spinner("Slicing, cropping to 9:16, and adding subtle corner watermark..."):
+        with st.spinner("Slicing and rendering clean HD vertical (9:16) shorts..."):
             try:
                 clip_files = []
                 video = VideoFileClip(video_path)
                 total_duration = int(video.duration)
                 
-                logo_raw_path = "logo.png"
                 interval = max(30, total_duration // (num_clips + 1))
                 
                 for i in range(num_clips):
@@ -96,24 +95,8 @@ if generate_btn:
                         x_center = w / 2
                         subclip = subclip.crop(x1=x_center - target_w/2, y1=0, x2=x_center + target_w/2, y2=h)
                     
-                    final_clip = subclip
-                    
-                    # Add tiny professional corner watermark if logo exists
-                    if os.path.exists(logo_raw_path):
-                        # Get dimensions of the final vertical crop
-                        cw, ch = subclip.size
-                        # Make logo very small (e.g., width = 12% of the video width)
-                        logo_width = int(cw * 0.12)
-                        
-                        logo_clip = (ImageClip(logo_raw_path)
-                                     .resize(width=logo_width)
-                                     .set_duration(subclip.duration)
-                                     .set_position((cw - logo_width - 35, 35)) ) # Tucked nicely into top-right edge with 35px padding
-                        
-                        final_clip = CompositeVideoClip([subclip, logo_clip])
-
                     out_name = os.path.join(output_dir, f"short_{i+1}_t{start_t}s.mp4")
-                    final_clip.write_videofile(
+                    subclip.write_videofile(
                         out_name, 
                         codec="libx264", 
                         audio_codec="aac", 
@@ -131,7 +114,7 @@ if generate_btn:
                 st.error(f"Error processing video clips: {e}")
 
 if st.session_state.generated and st.session_state.clip_files:
-    st.success(f"Successfully generated {len(st.session_state.clip_files)} Watermarked HD Shorts!")
+    st.success(f"Successfully generated {len(st.session_state.clip_files)} HD Shorts!")
     
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -141,9 +124,9 @@ if st.session_state.generated and st.session_state.clip_files:
     
     st.markdown("### 📥 Download Bulk Package:")
     st.download_button(
-        label=f"📦 Download All {len(st.session_state.clip_files)} Watermarked Shorts as ZIP",
+        label=f"📦 Download All {len(st.session_state.clip_files)} Shorts as ZIP",
         data=zip_buffer,
-        file_name="motivated_christian_watermarked_shorts.zip",
+        file_name="motivated_christian_hd_shorts.zip",
         mime="application/zip"
     )
     
