@@ -2,6 +2,12 @@ import os
 import zipfile
 import io
 import streamlit as st
+from PIL import Image
+
+# Pillow compatibility fix for MoviePy
+if not hasattr(Image, 'ANTIALIAS'):
+    Image.ANTIALIAS = Image.Resampling.LANCZOS
+
 from yt_dlp import YoutubeDL
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 
@@ -73,10 +79,8 @@ if generate_btn:
                 video = VideoFileClip(video_path)
                 total_duration = int(video.duration)
                 
-                # Prepare watermark logo if present
                 logo_clip = None
                 if os.path.exists("logo.png"):
-                    # Load logo, resize width to ~180px for a clean look on vertical shorts
                     logo_clip = ImageClip("logo.png").resize(width=180).set_position((40, 40))
 
                 interval = max(30, total_duration // (num_clips + 1))
@@ -90,16 +94,13 @@ if generate_btn:
                         
                     subclip = video.subclip(start_t, end_t)
                     
-                    # Crop to vertical 9:16 format
                     w, h = subclip.size
                     target_w = int(h * 9 / 16)
                     if target_w < w:
                         x_center = w / 2
                         subclip = subclip.crop(x1=x_center - target_w/2, y1=0, x2=x_center + target_w/2, y2=h)
                     
-                    # Overlay watermark logo if available
                     if logo_clip is not None:
-                        # Match watermark duration to subclip duration
                         current_logo = logo_clip.set_duration(subclip.duration)
                         final_clip = CompositeVideoClip([subclip, current_logo])
                     else:
@@ -123,11 +124,9 @@ if generate_btn:
             except Exception as e:
                 st.error(f"Error processing video clips: {e}")
 
-# Persistent display of downloadable package and metadata
 if st.session_state.generated and st.session_state.clip_files:
     st.success(f"Successfully generated {len(st.session_state.clip_files)} Watermarked HD Shorts!")
     
-    # Bundle into ZIP
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for file in st.session_state.clip_files:
