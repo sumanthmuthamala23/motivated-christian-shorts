@@ -62,7 +62,8 @@ if st.button("🚀 Generate Shorts & Captions"):
                     
                     if start_t >= total_duration:
                         break
-                        subclip = video.subclip(start_t, end_t)
+                        
+                    subclip = video.subclip(start_t, end_t)
                     
                     w, h = subclip.size
                     target_w = int(h * 9 / 16)
