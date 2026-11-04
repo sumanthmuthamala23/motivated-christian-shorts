@@ -3,7 +3,7 @@ import zipfile
 import io
 import streamlit as st
 from yt_dlp import YoutubeDL
-from moviepy.editor import VideoFileClip
+from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 
 st.set_page_config(page_title="Motivatedchristian Shorts Clipper", page_icon="✝️", layout="centered")
 
@@ -11,10 +11,10 @@ st.set_page_config(page_title="Motivatedchristian Shorts Clipper", page_icon="�
 if os.path.exists("banner.png"):
     st.image("banner.png", use_container_width=True)
 
-st.title("✝️ Motivatedchristian: HD Shorts & Metadata Generator")
-st.markdown("Upload your video file to generate high-resolution vertical shorts along with persistent titles, descriptions, and bulk ZIP download.")
+st.title("✝️ Motivatedchristian: HD Shorts & Watermark Generator")
+st.markdown("Upload your video file to generate high-resolution vertical shorts with your custom channel logo watermark permanently embedded at the top-left!")
 
-# Initialize Session State for persistence across downloads/reruns
+# Initialize Session State
 if "clip_files" not in st.session_state:
     st.session_state.clip_files = []
 if "generated" not in st.session_state:
@@ -31,7 +31,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    generate_btn = st.button("🚀 Generate Shorts & Captions")
+    generate_btn = st.button("🚀 Generate Watermarked Shorts")
 with col2:
     reset_btn = st.button("🔄 Reset App")
 
@@ -67,12 +67,18 @@ if generate_btn:
         st.warning("Please upload an MP4 file or paste a YouTube link.")
 
     if success and os.path.exists(video_path):
-        with st.spinner("Slicing and rendering HD vertical (9:16) shorts..."):
+        with st.spinner("Slicing, cropping to 9:16, and adding channel watermark..."):
             try:
                 clip_files = []
                 video = VideoFileClip(video_path)
                 total_duration = int(video.duration)
                 
+                # Prepare watermark logo if present
+                logo_clip = None
+                if os.path.exists("logo.png"):
+                    # Load logo, resize width to ~180px for a clean look on vertical shorts
+                    logo_clip = ImageClip("logo.png").resize(width=180).set_position((40, 40))
+
                 interval = max(30, total_duration // (num_clips + 1))
                 
                 for i in range(num_clips):
@@ -84,14 +90,23 @@ if generate_btn:
                         
                     subclip = video.subclip(start_t, end_t)
                     
+                    # Crop to vertical 9:16 format
                     w, h = subclip.size
                     target_w = int(h * 9 / 16)
                     if target_w < w:
                         x_center = w / 2
                         subclip = subclip.crop(x1=x_center - target_w/2, y1=0, x2=x_center + target_w/2, y2=h)
                     
+                    # Overlay watermark logo if available
+                    if logo_clip is not None:
+                        # Match watermark duration to subclip duration
+                        current_logo = logo_clip.set_duration(subclip.duration)
+                        final_clip = CompositeVideoClip([subclip, current_logo])
+                    else:
+                        final_clip = subclip
+
                     out_name = os.path.join(output_dir, f"short_{i+1}_t{start_t}s.mp4")
-                    subclip.write_videofile(
+                    final_clip.write_videofile(
                         out_name, 
                         codec="libx264", 
                         audio_codec="aac", 
@@ -108,9 +123,9 @@ if generate_btn:
             except Exception as e:
                 st.error(f"Error processing video clips: {e}")
 
-# Persistently display results so they never disappear on download
+# Persistent display of downloadable package and metadata
 if st.session_state.generated and st.session_state.clip_files:
-    st.success(f"Successfully generated {len(st.session_state.clip_files)} HD YouTube Shorts!")
+    st.success(f"Successfully generated {len(st.session_state.clip_files)} Watermarked HD Shorts!")
     
     # Bundle into ZIP
     zip_buffer = io.BytesIO()
@@ -121,9 +136,9 @@ if st.session_state.generated and st.session_state.clip_files:
     
     st.markdown("### 📥 Download Bulk Package:")
     st.download_button(
-        label=f"📦 Download All {len(st.session_state.clip_files)} Shorts as ZIP",
+        label=f"📦 Download All {len(st.session_state.clip_files)} Watermarked Shorts as ZIP",
         data=zip_buffer,
-        file_name="motivated_christian_hd_shorts.zip",
+        file_name="motivated_christian_watermarked_shorts.zip",
         mime="application/zip"
     )
     
