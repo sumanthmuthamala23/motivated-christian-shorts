@@ -13,14 +13,12 @@ from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 
 st.set_page_config(page_title="Motivatedchristian Shorts Clipper", page_icon="✝️", layout="centered")
 
-# Display Channel Banner Image if available in repo
 if os.path.exists("banner.png"):
     st.image("banner.png", use_container_width=True)
 
 st.title("✝️ Motivatedchristian: HD Shorts & Watermark Generator")
-st.markdown("Upload your video file to generate high-resolution vertical shorts with your custom channel logo watermark permanently embedded at the top-left!")
+st.markdown("Upload your video file to generate high-resolution vertical shorts with a tiny, clean professional watermark tucked at the top-right!")
 
-# Initialize Session State
 if "clip_files" not in st.session_state:
     st.session_state.clip_files = []
 if "generated" not in st.session_state:
@@ -73,16 +71,13 @@ if generate_btn:
         st.warning("Please upload an MP4 file or paste a YouTube link.")
 
     if success and os.path.exists(video_path):
-        with st.spinner("Slicing, cropping to 9:16, and adding channel watermark..."):
+        with st.spinner("Slicing, cropping to 9:16, and adding subtle corner watermark..."):
             try:
                 clip_files = []
                 video = VideoFileClip(video_path)
                 total_duration = int(video.duration)
                 
-                logo_clip = None
-                if os.path.exists("logo.png"):
-                    logo_clip = ImageClip("logo.png").resize(width=180).set_position((40, 40))
-
+                logo_raw_path = "logo.png"
                 interval = max(30, total_duration // (num_clips + 1))
                 
                 for i in range(num_clips):
@@ -94,17 +89,28 @@ if generate_btn:
                         
                     subclip = video.subclip(start_t, end_t)
                     
+                    # Crop to vertical 9:16 format
                     w, h = subclip.size
                     target_w = int(h * 9 / 16)
                     if target_w < w:
                         x_center = w / 2
                         subclip = subclip.crop(x1=x_center - target_w/2, y1=0, x2=x_center + target_w/2, y2=h)
                     
-                    if logo_clip is not None:
-                        current_logo = logo_clip.set_duration(subclip.duration)
-                        final_clip = CompositeVideoClip([subclip, current_logo])
-                    else:
-                        final_clip = subclip
+                    final_clip = subclip
+                    
+                    # Add tiny professional corner watermark if logo exists
+                    if os.path.exists(logo_raw_path):
+                        # Get dimensions of the final vertical crop
+                        cw, ch = subclip.size
+                        # Make logo very small (e.g., width = 12% of the video width)
+                        logo_width = int(cw * 0.12)
+                        
+                        logo_clip = (ImageClip(logo_raw_path)
+                                     .resize(width=logo_width)
+                                     .set_duration(subclip.duration)
+                                     .set_position((cw - logo_width - 35, 35)) ) # Tucked nicely into top-right edge with 35px padding
+                        
+                        final_clip = CompositeVideoClip([subclip, logo_clip])
 
                     out_name = os.path.join(output_dir, f"short_{i+1}_t{start_t}s.mp4")
                     final_clip.write_videofile(
