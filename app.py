@@ -7,8 +7,8 @@ from moviepy.editor import VideoFileClip
 
 st.set_page_config(page_title="Motivatedchristian Shorts Clipper", page_icon="✝️", layout="centered")
 
-st.title("✝️ Motivatedchristian: HD Shorts Generator")
-st.markdown("Upload your video file to instantly generate high-resolution (1080x1920) vertical shorts bundled in a single ZIP file!")
+st.title("✝️ Motivatedchristian: HD Shorts & Metadata Generator")
+st.markdown("Upload your video file to generate high-resolution vertical shorts along with ready-to-use titles, descriptions, and hashtags!")
 
 uploaded_file = st.file_uploader("Upload Long Video File (.mp4):", type=["mp4", "mov"])
 yt_url = st.text_input("Or Paste YouTube Video Link (optional):")
@@ -19,7 +19,7 @@ clip_duration = 30
 output_dir = "generated_shorts"
 os.makedirs(output_dir, exist_ok=True)
 
-if st.button("🚀 Generate High-Res Shorts"):
+if st.button("🚀 Generate Shorts & Captions"):
     video_path = "source_video.mp4"
     success = False
     
@@ -62,10 +62,8 @@ if st.button("🚀 Generate High-Res Shorts"):
                     
                     if start_t >= total_duration:
                         break
-                        
-                    subclip = video.subclip(start_t, end_t)
+                        subclip = video.subclip(start_t, end_t)
                     
-                    # Crop to vertical 9:16 format with high quality
                     w, h = subclip.size
                     target_w = int(h * 9 / 16)
                     if target_w < w:
@@ -73,7 +71,6 @@ if st.button("🚀 Generate High-Res Shorts"):
                         subclip = subclip.crop(x1=x_center - target_w/2, y1=0, x2=x_center + target_w/2, y2=h)
                     
                     out_name = os.path.join(output_dir, f"short_{i+1}_t{start_t}s.mp4")
-                    # Export at high quality parameters (1080p target scaling where applicable)
                     subclip.write_videofile(
                         out_name, 
                         codec="libx264", 
@@ -87,7 +84,7 @@ if st.button("🚀 Generate High-Res Shorts"):
                 
                 st.success(f"Successfully generated {len(clip_files)} HD YouTube Shorts!")
                 
-                # Bundle all shorts into a single downloadable ZIP archive
+                # Bundle into ZIP
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
                     for file in clip_files:
@@ -101,6 +98,14 @@ if st.button("🚀 Generate High-Res Shorts"):
                     file_name="motivated_christian_hd_shorts.zip",
                     mime="application/zip"
                 )
+                
+                # Display Copy-Paste Titles and Descriptions
+                st.markdown("---")
+                st.markdown("### 📝 Ready-to-Use Titles & Captions for Upload:")
+                for i in range(len(clip_files)):
+                    with st.expander(f"📌 Short {i+1} Details & Tags"):
+                        st.text_input(f"Title {i+1}", value=f"దేవుని కృప నిత్యం తోడుంటుంది 🙏✨ #{i+1} #Jesus #TeluguChristian #Shorts", key=f"title_{i}")
+                        st.text_area(f"Description & Hashtags {i+1}", value=f"Watch this powerful Telugu Christian message to strengthen your faith. Type 'Amen' in the comments!\n\n#TeluguChristian #JesusSaves #ChristianShorts #TeluguWorship #BiblePromise #MotivatedChristian", key=f"desc_{i}")
                 
             except Exception as e:
                 st.error(f"Error processing video clips: {e}")
