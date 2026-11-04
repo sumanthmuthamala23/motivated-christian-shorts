@@ -9,6 +9,8 @@ st.title("✝️ Motivatedchristian: Telugu Shorts Generator")
 st.markdown("Upload a video file or paste a YouTube link to automatically slice it into multiple 30-second vertical Telugu Christian Shorts!")
 
 yt_url = st.text_input("Paste YouTube Video Link:")
+format_choice = st.selectbox("Select Video Format Preference:", ["Best Single File (No FFmpeg required)", "Fast Download (360p/480p MP4)"])
+
 uploaded_file = st.file_uploader("Or Upload Long Video File (.mp4):", type=["mp4", "mov"])
 
 num_clips = st.slider("How many Shorts to generate?", min_value=3, max_value=10, value=5)
@@ -22,17 +24,35 @@ if st.button("🚀 Generate YouTube Shorts"):
     
     if yt_url:
         with st.spinner("Downloading video from YouTube using yt-dlp..."):
-            ydl_opts = {
-                'outtmpl': 'source_video.mp4',
-                'overwrites': True
-            }
+            if "Fast" in format_choice:
+                ydl_opts = {
+                    'format': 'bv*[height<=480]+ba/b[height<=480] / best[height<=480] / best',
+                    'outtmpl': 'source_video.mp4',
+                    'overwrites': True,
+                    'noplaylist': True
+                }
+            else:
+                ydl_opts = {
+                    'format': 'best[ext=mp4]/best',
+                    'outtmpl': 'source_video.mp4',
+                    'overwrites': True,
+                    'noplaylist': True
+                }
+            
             try:
                 with YoutubeDL(ydl_opts) as ydl:
                     ydl.download([yt_url])
                 video_path = "source_video.mp4"
                 st.success("YouTube video downloaded successfully!")
             except Exception as e:
-                st.error(f"Error downloading video: {e}")
+                try:
+                    ydl_opts_fallback = {'outtmpl': 'source_video.mp4', 'overwrites': True, 'noplaylist': True}
+                    with YoutubeDL(ydl_opts_fallback) as ydl:
+                        ydl.download([yt_url])
+                    video_path = "source_video.mp4"
+                    st.success("YouTube video downloaded successfully using fallback format!")
+                except Exception as e2:
+                    st.error(f"Error downloading video: {e2}")
                 
     elif uploaded_file is not None:
         video_path = "source_video.mp4"
