@@ -23,9 +23,8 @@ if st.button("🚀 Generate YouTube Shorts"):
     if yt_url:
         with st.spinner("Downloading video from YouTube using yt-dlp..."):
             ydl_opts = {
-                'format': 'bestvideo+bestaudio/best',
+                'format': 'best[ext=mp4]/best',
                 'outtmpl': 'source_video.mp4',
-                'merge_output_format': 'mp4',
                 'overwrites': True
             }
             try:
